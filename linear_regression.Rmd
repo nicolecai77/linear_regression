@@ -125,5 +125,47 @@ anova(fit_null,fit_alt) %>%
   broom::tidy()
 
 ```
+## Nest data,fit models
+this is pretty formal and also complex
+```{r}
+ fit = lm(price~stars*borough+room_type*borough,data=nyc_airbnb)
+broom::tidy(fit)
+```
 
+This is more exploratory but maybe easier to understand
+nes= create table
+map=apply a function to each element
+```{r}
+nyc_airbnb %>% 
+  nest(data=-borough) %>% 
+  mutate(
+    models=map(.x=data,~lm(price~stars+room_type,data=.x)),
+    results=map(models,broom::tidy)) %>% 
+  select(-data,-models) %>% 
+  unnest(results) %>% 
+  filter(term!="(Intercept)") %>% 
+  select(borough,term,estimate) %>% 
+  pivot_wider(
+    names_from = borough,
+    values_from = estimate
+  )
+```
+let's nest even more..
+nest(data=-) -exclude the varibales 
+```{r}
+nyc_airbnb %>% 
+  filter(borough == "Manhattan") %>% 
+  nest(data = -neighborhood) %>% 
+  mutate(
+    models = map(data, ~lm(price ~ stars + room_type, data = .x)),
+    results = map(models, broom::tidy)) %>% 
+  select(-data,-models) %>% 
+  unnest(results) %>% 
+  filter(str_detect(term, "room_type")) %>% 
+   ggplot(aes(x = neighborhood, y = estimate)) + 
+  geom_point() + 
+  facet_wrap(~term) + 
+  theme(axis.text.x = element_text(angle = 80, hjust = 1))
+```
 
+ 
